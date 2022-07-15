@@ -1,6 +1,7 @@
 import os
 from telebot import TeleBot
 from keyboa import Keyboa
+# from bot_requests.low_price import low_price
 
 
 def hotel_bot():
@@ -24,6 +25,11 @@ def hotel_bot():
             bot.send_message(message.from_user.id, "/history — вывод истории поиска отелей")
         else:
             bot.send_message(message.from_user.id, "Я тебя не понимаю. Напиши /help.")
+
+    # @bot.message_handler(content_types=["/lowprice"])
+    # def get_text_messages(message):
+    #     if message.text == "/lowprice":
+    #         print("/lowprice")
 
     bot.polling(none_stop=True, interval=0)
 
