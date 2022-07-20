@@ -1,5 +1,6 @@
 import json
 import requests
+from photos_request import want_photos, get_hotel_photo
 
 
 def low_price():
@@ -59,7 +60,7 @@ def low_price():
         querystring = {
             "destinationId": get_city(),
             "pageNumber": "1",
-            "pageSize": "5",
+            "pageSize": "3",
             "checkIn": "2022-08-08",
             "checkOut": "2022-08-15",
             "adults1": "1",
@@ -95,6 +96,8 @@ def low_price():
 
         hotel_answer = get_hotels()
 
+        photo_count = want_photos(input("you want to see photos of hotels? ('yes'/'no'): ").lower())
+
         answer = {}
         for cur_hotel in hotel_answer:
             hotel_id = cur_hotel.get("id")
@@ -121,31 +124,11 @@ def low_price():
                 "Price": current_price,
                 "Guest rating": guest_rating
             }
-            print(answer)
+            for answer_key, answer_value in answer.items():
+                print(answer_key + ":", answer_value)
 
-            photos = get_hotel_photo(hotel_id)
-            print(photos)
-
-    def get_hotel_photo(hotel_id):
-        url = "https://hotels4.p.rapidapi.com/properties/get-hotel-photos"
-
-        querystring = {"id": hotel_id}
-
-        headers = {
-            "X-RapidAPI-Key": "308a0ecd4dmsh778f749df86bb27p1e009ajsn881d6b34ec98",
-            "X-RapidAPI-Host": "hotels4.p.rapidapi.com"
-        }
-
-        photos = []
-        response = requests.request("GET", url, headers=headers, params=querystring)
-
-        if response:
-            data = json.loads(response.text)
-            for photo in data["hotelImages"]:
-                url = photo.get("baseUrl").replace("_{size}", "")
-                photos.append(url)
-
-        return photos
+            if photo_count > 0:
+                get_hotel_photo(hotel_id, photo_count)
 
     answer_hotel_list()
 
