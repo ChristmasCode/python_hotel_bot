@@ -1,6 +1,7 @@
 import json
 import requests
-from photos_request import want_photos, get_hotel_photo
+from telebot import TeleBot
+from bot_requests.photos_request import want_photos, get_hotel_photo
 
 
 def low_price():
@@ -74,7 +75,7 @@ def low_price():
             "X-RapidAPI-Host": "hotels4.p.rapidapi.com"
         }
 
-        response = requests.request("GET", url, headers=headers, params=querystring)
+        response = requests.request("GET", url, headers=headers, params=querystring, timeout=10)
         result = json.loads(response.text)
 
         # with open('location_answer', 'w+') as file:

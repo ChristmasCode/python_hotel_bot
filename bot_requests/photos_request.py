@@ -27,7 +27,7 @@ def get_hotel_photo(hotel_id, photo_count):
     }
 
     photos = []
-    response = requests.request("GET", url, headers=headers, params=querystring)
+    response = requests.request("GET", url, headers=headers, params=querystring, timeout=10)
 
     if response:
         data = json.loads(response.text)
