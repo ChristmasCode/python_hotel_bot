@@ -1,5 +1,6 @@
 import json
 import requests
+from loguru import logger
 from bot_requests.photos_request import want_photos, get_hotel_photo
 
 
@@ -20,7 +21,7 @@ from bot_requests.photos_request import want_photos, get_hotel_photo
 #     """
 
 def get_location(city):
-    print('get_location log:', city)
+    logger.info(city)
     url = "https://hotels4.p.rapidapi.com/locations/v2/search"
 
     querystring = {
@@ -39,38 +40,38 @@ def get_location(city):
 
     # with open('location_answer', 'w+') as file:
     #     json.dump(result, file, indent=4)
-    print('get_location result log:', result)
+    logger.info(result)
     return result
 
 
 def get_city(city):
-    print('get_city log:', city)
+    logger.info(city)
     result_location = get_location(city)
     data_suggestions = result_location.get('suggestions')
     group_city_data = data_suggestions[0]
-    print('group_city_names log:', group_city_data)
+    logger.info(group_city_data)
     data_city_name = [name.get('name') for name in group_city_data.get('entities')]  # returns a list of cities
     # (city districts)
-    print('data_city_name log', data_city_name)
+    logger.info(data_city_name)
     data_destinationId = [destinationId.get('destinationId') for destinationId in group_city_data.get('entities')]  #
     # returns the ID of cities(city districts)
     data_city_id = data_destinationId
-    print('data_city_id log:', data_city_id)
+    logger.info(data_city_id)
     result = dict(zip(data_city_name, data_city_id))
-    print('get_city result log', result)
+    logger.info(result)
 
     return result
 
 
-def get_properties(city_id):
+def lowprice_get_properties(city_id, number_of_hotels, data_in, data_out):
     url = "https://hotels4.p.rapidapi.com/properties/list"
 
     querystring = {
         "destinationId": city_id,
         "pageNumber": "1",
-        "pageSize": "3",
-        "checkIn": "2022-08-08",
-        "checkOut": "2022-08-15",
+        "pageSize": number_of_hotels,
+        "checkIn": data_in,
+        "checkOut": data_out,
         "adults1": "1",
         "sortOrder": "PRICE",
         "locale": "en_US",
@@ -82,17 +83,16 @@ def get_properties(city_id):
         "X-RapidAPI-Host": "hotels4.p.rapidapi.com"
     }
 
-    response = requests.request("GET", url, headers=headers, params=querystring, timeout=10)
+    response = requests.request("GET", url, headers=headers, params=querystring, timeout=60)
     result = json.loads(response.text)
 
     # with open('location_answer', 'w+') as file:
     #     json.dump(result, file, indent=4)
-    print(result)
-    return result
+    logger.info(result)
+    return get_hotels(result)
 
 
-def get_hotels():
-    result_hotels = get_properties()
+def get_hotels(result_hotels):
 
     result = (result_hotels['data']['body']['searchResults']['results'])
     # with open('hotel_answer', 'w+') as file:
@@ -101,8 +101,7 @@ def get_hotels():
     return result
 
 
-def answer_low_hotel_list():
-    hotel_answer = get_hotels()
+def answer_low_hotel_list(hotel_answer):
 
     photo_count = want_photos(input("you want to see photos of hotels? ('yes'/'no'): ").lower())
 
@@ -130,7 +129,8 @@ def answer_low_hotel_list():
             "Hotel name": cur_hotel.get("name"),
             "Address": address.get("streetAddress", "no address"),
             "Price": current_price,
-            "Guest rating": guest_rating
+            "Guest rating": guest_rating,
+            "Link": "https://www.hotels.com/ho" + str(hotel_id)
         }
         for answer_key, answer_value in answer.items():
             print(answer_key + ":", answer_value)
