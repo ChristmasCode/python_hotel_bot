@@ -1,8 +1,10 @@
 import telebot
 from telebot import types
 from telegram_bot_calendar import DetailedTelegramCalendar, LSTEP
-from bot_requests.low_price import get_city, lowprice_get_properties, answer_low_hotel_list
+from bot_requests.low_price import get_city, lowprice_get_properties, lowprice_final_answer
 from loguru import logger
+
+
 TOKEN = '5511162987:AAGtehigXviygciyEJHdfBRgr8zVwzJtdh4'
 bot = telebot.TeleBot(TOKEN)
 
@@ -12,6 +14,8 @@ bot_help = "/lowprice - Search of the cheapest hotels in the city\n" \
            "from the city center\n" \
            "/history - hotel search history\n" \
            "/help"
+
+db_dict = {}
 
 
 @bot.message_handler(commands=["info"])
@@ -59,28 +63,88 @@ def cal(call):
 
 
 def route_by_state(date, user_id, chat_id):
-    state = bd_dict[user_id]["state"]
+    state = db_dict[user_id]["state"]
     match state:
         case "date_from":
-            bd_dict[user_id]["checkIn"] = date
-            bd_dict[user_id]["state"] = "date_to"
+            db_dict[user_id]["checkIn"] = date
+            db_dict[user_id]["state"] = "date_to"
             calendar, step = DetailedTelegramCalendar().build()
             bot.send_message(chat_id, "Select check out date: ")
             bot.send_message(chat_id,
                              f"Select {LSTEP[step]}",
                              reply_markup=calendar)
         case "date_to":
-            user = bd_dict[user_id]
+            user = db_dict[user_id]
+            db_dict[user_id]["checkOut"] = date
+            mesg = bot.send_message(chat_id, "You want to see photos of hotels? ('yes'/'no'): ")
+            bot.register_next_step_handler(mesg, bot_photos_request, user_id)
+            # lowprice_get_properties(
+            #     city_id=user["city"],
+            #     number_of_hotels=user["number_of_hotels"],
+            #     data_in=user["checkIn"],
+            #     data_out=user["checkOut"]
+            # )
+
+
+def bot_photos_request(message, user_id):
+    mesg = message.text.lower()
+    logger.info(mesg)
+    match mesg:
+        case "yes":
+            how_many_photos = bot.send_message(message.chat.id, "How many photos? (no more than 10) ")
+            bot.register_next_step_handler(how_many_photos, bot_photos_count, message.from_user.id)
+        case "no":
+            user = db_dict[user_id]
             lowprice_get_properties(
                 city_id=user["city"],
                 number_of_hotels=user["number_of_hotels"],
                 data_in=user["checkIn"],
-                data_out=date
+                data_out=user["checkOut"],
+                photos_count=0
             )
-            bot.send_message(chat_id, "you want to see photos of hotels? ('yes'/'no'): ")
+        case _:
+            mesg = bot.send_message(message.chat.id, "You want to see photos of hotels? ('yes'/'no'): ")
+            bot.register_next_step_handler(mesg, bot_photos_request)
 
 
-bd_dict = {}
+def bot_photos_count(message, user_id):
+    mesg = message.text.lower()
+    logger.info(mesg)
+    if not (mesg.isnumeric() and int(mesg) > 0):
+        bot.send_message(message.chat.id, "Enter an integer, a positive number")
+        how_many_photos = bot.send_message(message.chat.id, "How many photos? (no more than 10) ")
+        bot.register_next_step_handler(how_many_photos, bot_photos_count)
+    if mesg.isnumeric() and int(mesg) > 0:
+        user = db_dict[user_id]
+        db_dict[user_id]["photos_count"] = mesg
+        logger.info(db_dict)
+        lowprice_get_properties(
+            city_id=user["city"],
+            number_of_hotels=user["number_of_hotels"],
+            data_in=user["checkIn"],
+            data_out=user["checkOut"],
+            photos_count=user["photos_count"]
+        )
+
+        bot.send_message(message.chat.id, "Search is over: ")
+        final_answer = lowprice_final_answer(answer)
+        # for answer_key, answer_value in final_answer.items():
+        #     bot.send_message(message.from_user.id, answer_key, answer_value)
+        # bot.register_next_step_handler(final_answer, low_final_answer, answer)
+
+
+# def low_final_answer(message, final_answer):
+#     for answer_key, answer_value in final_answer.items():
+#         bot.send_message(message.from_user.id, answer_key, answer_value)
+
+
+    # match mesg:
+    #     case int():
+    #         bot.send_message(message.chat.id, mesg)
+    #     case _:
+    #         bot.send_message(message.chat.id, "Enter an integer, a positive number")
+    #         how_many_photos = bot.send_message(message.chat.id, "How many photos? (no more than 10) ")
+    #         bot.register_next_step_handler(how_many_photos, bot_photos_count)
 
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -100,8 +164,8 @@ def answer(call):
         case _:
             if call.data.startswith("lowprice_answer"):
                 mesg_city_id = call.message.chat.id, call.data.replace("lowprice_answer", '')
-                bd_dict[call.from_user.id] = {"city": mesg_city_id[1]}
-                logger.info(bd_dict)
+                db_dict[call.from_user.id] = {"city": mesg_city_id[1]}
+                logger.info(db_dict)
                 logger.info(mesg_city_id)
                 mesg = bot.send_message(call.from_user.id, "How many hotels to show: ")
                 bot.register_next_step_handler(mesg, count_hotels)
@@ -132,10 +196,10 @@ def low_price_city_request(message):
 @bot.message_handler(chat_types="text")
 def count_hotels(message):
     mesg = message.text
-    bd_dict[message.from_user.id]["number_of_hotels"] = mesg
-    bd_dict[message.from_user.id]["state"] = "date_from"
+    db_dict[message.from_user.id]["number_of_hotels"] = mesg
+    db_dict[message.from_user.id]["state"] = "date_from"
     logger.info(mesg)
-    logger.info(bd_dict)
+    logger.info(db_dict)
     calendar, step = DetailedTelegramCalendar().build()
     bot.send_message(message.chat.id, "Select check in date: ")
     bot.send_message(message.chat.id,

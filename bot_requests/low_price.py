@@ -1,7 +1,7 @@
 import json
 import requests
 from loguru import logger
-from bot_requests.photos_request import want_photos, get_hotel_photo
+from bot_requests.photos_request import get_hotel_photo
 
 
 # low_price:
@@ -35,7 +35,7 @@ def get_location(city):
         "X-RapidAPI-Host": "hotels4.p.rapidapi.com"
     }
 
-    response = requests.request("GET", url, headers=headers, params=querystring, timeout=10)
+    response = requests.request("GET", url, headers=headers, params=querystring, timeout=60)
     result = json.loads(response.text)
 
     # with open('location_answer', 'w+') as file:
@@ -63,8 +63,10 @@ def get_city(city):
     return result
 
 
-def lowprice_get_properties(city_id, number_of_hotels, data_in, data_out):
+def lowprice_get_properties(city_id, number_of_hotels, data_in, data_out, photos_count):
     url = "https://hotels4.p.rapidapi.com/properties/list"
+
+    photos_count_answer = photos_count
 
     querystring = {
         "destinationId": city_id,
@@ -89,26 +91,30 @@ def lowprice_get_properties(city_id, number_of_hotels, data_in, data_out):
     # with open('location_answer', 'w+') as file:
     #     json.dump(result, file, indent=4)
     logger.info(result)
-    return get_hotels(result)
+    return get_hotels(result, photos_count_answer)
 
 
-def get_hotels(result_hotels):
-
+def get_hotels(result_hotels, photos_count_answer):
     result = (result_hotels['data']['body']['searchResults']['results'])
     # with open('hotel_answer', 'w+') as file:
     #     json.dump(result, file, indent=4)
+    logger.info(result)
+    return answer_low_hotel_list(result, photos_count_answer)
 
-    return result
 
+def answer_low_hotel_list(hotel_answer, photos_count_answer):
+    photo_count = photos_count_answer
 
-def answer_low_hotel_list(hotel_answer):
-
-    photo_count = want_photos(input("you want to see photos of hotels? ('yes'/'no'): ").lower())
-
+    # hotels_id = hotel_answer[0].get("id")
+    # logger.info(hotels_id)
+    final_answer = []
     answer = {}
+    photos = None
     for cur_hotel in hotel_answer:
         hotel_id = cur_hotel.get("id")
         address = cur_hotel.get("address")
+        if int(photo_count) > 0:
+            photos = get_hotel_photo(hotel_id, photo_count)
 
         current_price = "no price"
         ratePlan = cur_hotel.get("ratePlan")
@@ -130,14 +136,18 @@ def answer_low_hotel_list(hotel_answer):
             "Address": address.get("streetAddress", "no address"),
             "Price": current_price,
             "Guest rating": guest_rating,
-            "Link": "https://www.hotels.com/ho" + str(hotel_id)
+            "Link": "https://www.hotels.com/ho" + str(hotel_id),
+            "Photo": photos
         }
-        for answer_key, answer_value in answer.items():
-            print(answer_key + ":", answer_value)
+        final_answer.append(answer)
 
-        if photo_count > 0:
-            get_hotel_photo(hotel_id, photo_count)
+    logger.info(final_answer)
 
-    # answer_low_hotel_list()
+        # for value in answer:
+        #     final_answer.append(value)
 
-# low_price()
+    return lowprice_final_answer(final_answer)
+
+
+def lowprice_final_answer(answer):
+    return answer
