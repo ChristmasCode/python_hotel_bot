@@ -31,7 +31,7 @@ def get_location(city):
     }
 
     headers = {
-        "X-RapidAPI-Key": "308a0ecd4dmsh778f749df86bb27p1e009ajsn881d6b34ec98",
+        "X-RapidAPI-Key": "5de7c86d3dmsh12453c2c117c912p1f8168jsne9d8cf4c1876",
         "X-RapidAPI-Host": "hotels4.p.rapidapi.com"
     }
 
@@ -81,7 +81,7 @@ def lowprice_get_properties(city_id, number_of_hotels, data_in, data_out, photos
     }
 
     headers = {
-        "X-RapidAPI-Key": "308a0ecd4dmsh778f749df86bb27p1e009ajsn881d6b34ec98",
+        "X-RapidAPI-Key": "5de7c86d3dmsh12453c2c117c912p1f8168jsne9d8cf4c1876",
         "X-RapidAPI-Host": "hotels4.p.rapidapi.com"
     }
 
@@ -105,8 +105,6 @@ def get_hotels(result_hotels, photos_count_answer):
 def answer_low_hotel_list(hotel_answer, photos_count_answer):
     photo_count = photos_count_answer
 
-    # hotels_id = hotel_answer[0].get("id")
-    # logger.info(hotels_id)
     final_answer = []
     answer = {}
     photos = None
@@ -132,22 +130,15 @@ def answer_low_hotel_list(hotel_answer, photos_count_answer):
             guest_rating = guestReviews.get("rating")
 
         answer = {
-            "Hotel name": cur_hotel.get("name"),
-            "Address": address.get("streetAddress", "no address"),
-            "Price": current_price,
-            "Guest rating": guest_rating,
-            "Link": "https://www.hotels.com/ho" + str(hotel_id),
-            "Photo": photos
+            "🏨 Hotel name": cur_hotel.get("name"),
+            "📬 Address": address.get("streetAddress", "no address"),
+            "💲 Price": current_price,
+            "💖 Guest rating": guest_rating,
+            "🔗 Link": "https://www.hotels.com/ho" + str(hotel_id),
+            "📷 Photo": photos
         }
         final_answer.append(answer)
 
     logger.info(final_answer)
 
-        # for value in answer:
-        #     final_answer.append(value)
-
-    return lowprice_final_answer(final_answer)
-
-
-def lowprice_final_answer(answer):
-    return answer
+    return final_answer

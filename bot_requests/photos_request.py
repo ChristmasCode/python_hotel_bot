@@ -23,7 +23,7 @@ def get_hotel_photo(hotel_id, photo_count):
     answer = []
 
     headers = {
-        "X-RapidAPI-Key": "308a0ecd4dmsh778f749df86bb27p1e009ajsn881d6b34ec98",
+        "X-RapidAPI-Key": "5de7c86d3dmsh12453c2c117c912p1f8168jsne9d8cf4c1876",
         "X-RapidAPI-Host": "hotels4.p.rapidapi.com"
     }
 

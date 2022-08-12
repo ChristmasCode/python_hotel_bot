@@ -1,7 +1,7 @@
 import telebot
 from telebot import types
 from telegram_bot_calendar import DetailedTelegramCalendar, LSTEP
-from bot_requests.low_price import get_city, lowprice_get_properties, lowprice_final_answer
+from bot_requests.low_price import get_city, lowprice_get_properties
 from loguru import logger
 
 
@@ -94,14 +94,15 @@ def bot_photos_request(message, user_id):
             how_many_photos = bot.send_message(message.chat.id, "How many photos? (no more than 10) ")
             bot.register_next_step_handler(how_many_photos, bot_photos_count, message.from_user.id)
         case "no":
-            user = db_dict[user_id]
-            lowprice_get_properties(
-                city_id=user["city"],
-                number_of_hotels=user["number_of_hotels"],
-                data_in=user["checkIn"],
-                data_out=user["checkOut"],
-                photos_count=0
-            )
+            pass
+            # user = db_dict[user_id]
+            # lowprice_get_properties(
+            #     city_id=user["city"],
+            #     number_of_hotels=user["number_of_hotels"],
+            #     data_in=user["checkIn"],
+            #     data_out=user["checkOut"],
+            #     photos_count=0
+            # )
         case _:
             mesg = bot.send_message(message.chat.id, "You want to see photos of hotels? ('yes'/'no'): ")
             bot.register_next_step_handler(mesg, bot_photos_request)
@@ -118,7 +119,7 @@ def bot_photos_count(message, user_id):
         user = db_dict[user_id]
         db_dict[user_id]["photos_count"] = mesg
         logger.info(db_dict)
-        lowprice_get_properties(
+        final_answer = lowprice_get_properties(
             city_id=user["city"],
             number_of_hotels=user["number_of_hotels"],
             data_in=user["checkIn"],
@@ -127,15 +128,31 @@ def bot_photos_count(message, user_id):
         )
 
         bot.send_message(message.chat.id, "Search is over: ")
-        final_answer = lowprice_final_answer(answer)
-        # for answer_key, answer_value in final_answer.items():
-        #     bot.send_message(message.from_user.id, answer_key, answer_value)
-        # bot.register_next_step_handler(final_answer, low_final_answer, answer)
+        logger.info(final_answer)
+        for hotel in final_answer:
+            for key, value in hotel.items():
+                if key == "Photo":
+                    if value[-1].startswith("Sorry, just found photos"):
+                        if value[-1] == 'Sorry, just found photos: 0':
+                            bot.send_message(message.chat.id, "Sorry hotel photos not found")
+                        else:
+                            bot.send_media_group(message.chat.id, value[-1])
+                            bot.send_media_group(message.chat.id,
+                                                 [telebot.types.InputMediaPhoto(photo) for photo in value])
+                    else:
+                        bot.send_media_group(message.chat.id,
+                                             [telebot.types.InputMediaPhoto(photo) for photo in value])
+                else:
+                    bot.send_message(message.chat.id, key + " : " + value)
+
+        # bot.register_next_step_handler(final_answer, low_final_answer)
 
 
 # def low_final_answer(message, final_answer):
-#     for answer_key, answer_value in final_answer.items():
-#         bot.send_message(message.from_user.id, answer_key, answer_value)
+#     mesg = final_answer
+#     logger.info(mesg)
+    # for value in mesg:
+    #     bot.send_message(message.chat.id, value)
 
 
     # match mesg:
