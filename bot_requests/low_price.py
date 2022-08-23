@@ -38,13 +38,11 @@ def get_location(city):
     response = requests.request("GET", url, headers=headers, params=querystring, timeout=60)
     result = json.loads(response.text)
 
-    # with open('location_answer', 'w+') as file:
-    #     json.dump(result, file, indent=4)
     logger.info(result)
     return result
 
 
-def get_city(city):
+def low_get_city(city):
     logger.info(city)
     result_location = get_location(city)
     data_suggestions = result_location.get('suggestions')
@@ -88,8 +86,6 @@ def lowprice_get_properties(city_id, number_of_hotels, data_in, data_out, photos
     response = requests.request("GET", url, headers=headers, params=querystring, timeout=60)
     result = json.loads(response.text)
 
-    # with open('location_answer', 'w+') as file:
-    #     json.dump(result, file, indent=4)
     logger.info(result)
     return get_hotels(result, photos_count_answer)
 

@@ -1,7 +1,8 @@
 import telebot
 from telebot import types
 from telegram_bot_calendar import DetailedTelegramCalendar, LSTEP
-from bot_requests.low_price import get_city, lowprice_get_properties
+from bot_requests.low_price import low_get_city, lowprice_get_properties
+from bot_requests.high_price import high_get_city, high_get_properties
 from loguru import logger
 
 
@@ -36,7 +37,6 @@ def get_commands_messages(message):
     bot.send_message(message.chat.id, "commands:", reply_markup=keyboard)
 
 
-# @bot.message_handler(commands=['calendar'])
 @logger.catch()
 def bot_calendar(message):
     calendar, step = DetailedTelegramCalendar().build()
@@ -80,13 +80,26 @@ def route_by_state(date, user_id, chat_id):
             bot.register_next_step_handler(mesg, bot_photos_request, user_id)
 
 
+@bot.message_handler(chat_types="text")
+def count_hotels(message):
+    mesg = message.text
+    db_dict[message.from_user.id]["number_of_hotels"] = mesg
+    db_dict[message.from_user.id]["state"] = "date_from"
+    logger.info(mesg)
+    logger.info(db_dict)
+    calendar, step = DetailedTelegramCalendar().build()
+    bot.send_message(message.chat.id, "Select check in date: ")
+    bot.send_message(message.chat.id,
+                     f"Select {LSTEP[step]}",
+                     reply_markup=calendar)
+
+
 # def photo_request_button(message):
 #     keyboard = types.InlineKeyboardMarkup(row_width=1)
 #     key_yes = types.InlineKeyboardButton(text="yes", callback_data="yes")
 #     key_no = types.InlineKeyboardButton(text="no", callback_data="no")
 #     keyboard.add(key_yes, key_no)
 #     bot.send_message(message.chat.id, "Make your choice:", reply_markup=keyboard)
-
 
 
 def bot_photos_request(message, user_id):
@@ -98,13 +111,24 @@ def bot_photos_request(message, user_id):
             bot.register_next_step_handler(how_many_photos, bot_photos_count, message.from_user.id)
         case "no":
             user = db_dict[user_id]
-            final_answer = lowprice_get_properties(
-                city_id=user["city"],
-                number_of_hotels=user["number_of_hotels"],
-                data_in=user["checkIn"],
-                data_out=user["checkOut"],
-                photos_count=0
-            )
+            final_answer = None
+            if db_dict[user_id]["price"] == "low":
+                final_answer = lowprice_get_properties(
+                    city_id=user["city"],
+                    number_of_hotels=user["number_of_hotels"],
+                    data_in=user["checkIn"],
+                    data_out=user["checkOut"],
+                    photos_count=0
+                )
+
+            elif db_dict[user_id]["price"] == "high":
+                final_answer = high_get_properties(
+                    city_id=user["city"],
+                    number_of_hotels=user["number_of_hotels"],
+                    data_in=user["checkIn"],
+                    data_out=user["checkOut"],
+                    photos_count=0
+                )
             bot.send_message(message.chat.id, "Search is over: ")
             for hotel in final_answer:
                 bot.send_message(message.chat.id, "Next hotel ⬇")
@@ -130,14 +154,23 @@ def bot_photos_count(message, user_id):
         user = db_dict[user_id]
         db_dict[user_id]["photos_count"] = mesg
         logger.info(db_dict)
-        final_answer = lowprice_get_properties(
-            city_id=user["city"],
-            number_of_hotels=user["number_of_hotels"],
-            data_in=user["checkIn"],
-            data_out=user["checkOut"],
-            photos_count=user["photos_count"]
-        )
-
+        final_answer = None
+        if db_dict[user_id]["price"] == "low":
+            final_answer = lowprice_get_properties(
+                city_id=user["city"],
+                number_of_hotels=user["number_of_hotels"],
+                data_in=user["checkIn"],
+                data_out=user["checkOut"],
+                photos_count=user["photos_count"]
+            )
+        elif db_dict[user_id]["price"] == "low":
+            final_answer = high_get_properties(
+                city_id=user["city"],
+                number_of_hotels=user["number_of_hotels"],
+                data_in=user["checkIn"],
+                data_out=user["checkOut"],
+                photos_count=user["photos_count"]
+            )
         bot.send_message(message.chat.id, "Search is over: ")
         logger.info(final_answer)
         for hotel in final_answer:
@@ -159,30 +192,6 @@ def bot_photos_count(message, user_id):
                     bot.send_message(message.chat.id, key + " : " + value)
 
 
-@bot.callback_query_handler(func=lambda call: True)
-@logger.catch()
-def answer(call):
-    logger.info(call)
-    match call.data:
-        case "lowprice":
-            mesg = bot.send_message(call.from_user.id, "Enter the city where you want to search: ")
-            bot.register_next_step_handler(mesg, low_price_city_request)
-        case "highprice":
-            bot.send_message(call.message.chat.id, "highprice")
-        case "bestdeal":
-            bot.send_message(call.message.chat.id, "bestdeal")
-        case "history":
-            bot.send_message(call.message.chat.id, "history")
-        case _:
-            if call.data.startswith("lowprice_answer"):
-                mesg_city_id = call.message.chat.id, call.data.replace("lowprice_answer", '')
-                db_dict[call.from_user.id] = {"city": mesg_city_id[1]}
-                logger.info(db_dict)
-                logger.info(mesg_city_id)
-                mesg = bot.send_message(call.from_user.id, "How many hotels to show: ")
-                bot.register_next_step_handler(mesg, count_hotels)
-
-
 @bot.message_handler(commands=["help"])
 @logger.catch()
 def get_text_messages(message):
@@ -192,7 +201,7 @@ def get_text_messages(message):
 @bot.message_handler(commands=["lowprice"])
 @logger.catch()
 def low_price_city_request(message):
-    cities_districts = get_city(message.text)
+    cities_districts = low_get_city(message.text)
     logger.info(cities_districts)
     keyboard = types.InlineKeyboardMarkup(row_width=1)
     for city_name, city_id in cities_districts.items():
@@ -205,21 +214,63 @@ def low_price_city_request(message):
     bot.register_next_step_handler(mesg, low_price_city_answer)
 
 
-@bot.message_handler(chat_types="text")
-def count_hotels(message):
-    mesg = message.text
-    db_dict[message.from_user.id]["number_of_hotels"] = mesg
-    db_dict[message.from_user.id]["state"] = "date_from"
-    logger.info(mesg)
-    logger.info(db_dict)
-    calendar, step = DetailedTelegramCalendar().build()
-    bot.send_message(message.chat.id, "Select check in date: ")
-    bot.send_message(message.chat.id,
-                     f"Select {LSTEP[step]}",
-                     reply_markup=calendar)
+@bot.message_handler(commands=["highprice"])
+@logger.catch()
+def hight_price_city_request(message):
+    cities_districts = high_get_city(message.text)
+    logger.info(cities_districts)
+    keyboard = types.InlineKeyboardMarkup(row_width=1)
+    for city_name, city_id in cities_districts.items():
+        button = types.InlineKeyboardButton(
+            text=city_name,
+            callback_data="highprice_answer" + city_id
+        )
+        keyboard.add(button)
+    mesg = bot.send_message(message.chat.id, 'Make your choice:', reply_markup=keyboard)
+    bot.register_next_step_handler(mesg, high_price_city_answer)
+
+
+@bot.callback_query_handler(func=lambda call: True)
+@logger.catch()
+def answer(call):
+    logger.info(call)
+    match call.data:
+        case "lowprice":
+            mesg = bot.send_message(call.from_user.id, "Enter the city where you want to search: ")
+            bot.register_next_step_handler(mesg, low_price_city_request)
+        case "highprice":
+            mesg = bot.send_message(call.from_user.id, "Enter the city where you want to search: ")
+            bot.register_next_step_handler(mesg, hight_price_city_request)
+        case "bestdeal":
+            bot.send_message(call.message.chat.id, "bestdeal")
+        case "history":
+            bot.send_message(call.message.chat.id, "history")
+        case _:
+            if call.data.startswith("lowprice_answer"):
+                mesg_city_id = call.message.chat.id, call.data.replace("lowprice_answer", '')
+                db_dict[call.from_user.id] = {"city": mesg_city_id[1]}
+                db_dict[call.from_user.id]["price"] = "low"
+                logger.info(db_dict)
+                logger.info(mesg_city_id)
+                mesg = bot.send_message(call.from_user.id, "How many hotels to show: ")
+                bot.register_next_step_handler(mesg, count_hotels)
+            elif call.data.startswith("highprice_answer"):
+                mesg_city_id = call.message.chat.id, call.data.replace("highprice_answer", '')
+                db_dict[call.from_user.id] = {"city": mesg_city_id[1]}
+                db_dict[call.from_user.id]["price"] = "high"
+                logger.info(db_dict)
+                logger.info(mesg_city_id)
+                mesg = bot.send_message(call.from_user.id, "How many hotels to show: ")
+                bot.register_next_step_handler(mesg, count_hotels)
 
 
 def low_price_city_answer(message):
+    mesg = message.text
+    logger.info(mesg)
+    return mesg
+
+
+def high_price_city_answer(message):
     mesg = message.text
     logger.info(mesg)
     return mesg
