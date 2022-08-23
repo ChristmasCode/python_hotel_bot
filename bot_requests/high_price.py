@@ -1,6 +1,6 @@
 import json
 import requests
-from photos_request import want_photos, get_hotel_photo
+from photos_request import get_hotel_photo
 
 
 def high_price():

@@ -78,12 +78,15 @@ def route_by_state(date, user_id, chat_id):
             db_dict[user_id]["checkOut"] = date
             mesg = bot.send_message(chat_id, "You want to see photos of hotels? ('yes'/'no'): ")
             bot.register_next_step_handler(mesg, bot_photos_request, user_id)
-            # lowprice_get_properties(
-            #     city_id=user["city"],
-            #     number_of_hotels=user["number_of_hotels"],
-            #     data_in=user["checkIn"],
-            #     data_out=user["checkOut"]
-            # )
+
+
+# def photo_request_button(message):
+#     keyboard = types.InlineKeyboardMarkup(row_width=1)
+#     key_yes = types.InlineKeyboardButton(text="yes", callback_data="yes")
+#     key_no = types.InlineKeyboardButton(text="no", callback_data="no")
+#     keyboard.add(key_yes, key_no)
+#     bot.send_message(message.chat.id, "Make your choice:", reply_markup=keyboard)
+
 
 
 def bot_photos_request(message, user_id):
@@ -91,18 +94,26 @@ def bot_photos_request(message, user_id):
     logger.info(mesg)
     match mesg:
         case "yes":
-            how_many_photos = bot.send_message(message.chat.id, "How many photos? (no more than 10) ")
+            how_many_photos = bot.send_message(message.chat.id, "How many photos?")
             bot.register_next_step_handler(how_many_photos, bot_photos_count, message.from_user.id)
         case "no":
-            pass
-            # user = db_dict[user_id]
-            # lowprice_get_properties(
-            #     city_id=user["city"],
-            #     number_of_hotels=user["number_of_hotels"],
-            #     data_in=user["checkIn"],
-            #     data_out=user["checkOut"],
-            #     photos_count=0
-            # )
+            user = db_dict[user_id]
+            final_answer = lowprice_get_properties(
+                city_id=user["city"],
+                number_of_hotels=user["number_of_hotels"],
+                data_in=user["checkIn"],
+                data_out=user["checkOut"],
+                photos_count=0
+            )
+            bot.send_message(message.chat.id, "Search is over: ")
+            for hotel in final_answer:
+                bot.send_message(message.chat.id, "Next hotel ⬇")
+                for key, value in hotel.items():
+                    if key == "📷 Photo":
+                        pass
+                    else:
+                        bot.send_message(message.chat.id, key + " : " + value)
+
         case _:
             mesg = bot.send_message(message.chat.id, "You want to see photos of hotels? ('yes'/'no'): ")
             bot.register_next_step_handler(mesg, bot_photos_request)
@@ -130,13 +141,15 @@ def bot_photos_count(message, user_id):
         bot.send_message(message.chat.id, "Search is over: ")
         logger.info(final_answer)
         for hotel in final_answer:
+            logger.info(hotel)
+            bot.send_message(message.chat.id, "Next hotel ⬇")
             for key, value in hotel.items():
-                if key == "Photo":
+                if key == "📷 Photo":
                     if value[-1].startswith("Sorry, just found photos"):
                         if value[-1] == 'Sorry, just found photos: 0':
                             bot.send_message(message.chat.id, "Sorry hotel photos not found")
                         else:
-                            bot.send_media_group(message.chat.id, value[-1])
+                            bot.send_message(message.chat.id, value[-1])
                             bot.send_media_group(message.chat.id,
                                                  [telebot.types.InputMediaPhoto(photo) for photo in value])
                     else:
@@ -144,24 +157,6 @@ def bot_photos_count(message, user_id):
                                              [telebot.types.InputMediaPhoto(photo) for photo in value])
                 else:
                     bot.send_message(message.chat.id, key + " : " + value)
-
-        # bot.register_next_step_handler(final_answer, low_final_answer)
-
-
-# def low_final_answer(message, final_answer):
-#     mesg = final_answer
-#     logger.info(mesg)
-    # for value in mesg:
-    #     bot.send_message(message.chat.id, value)
-
-
-    # match mesg:
-    #     case int():
-    #         bot.send_message(message.chat.id, mesg)
-    #     case _:
-    #         bot.send_message(message.chat.id, "Enter an integer, a positive number")
-    #         how_many_photos = bot.send_message(message.chat.id, "How many photos? (no more than 10) ")
-    #         bot.register_next_step_handler(how_many_photos, bot_photos_count)
 
 
 @bot.callback_query_handler(func=lambda call: True)
