@@ -103,7 +103,7 @@ def answer_high_hotel_list(hotel_answer, photos_count_answer):
 
     final_answer = []
     answer = {}
-    photos = None
+    photos = 'Sorry, just found photos: 0'
     for cur_hotel in hotel_answer:
         hotel_id = cur_hotel.get("id")
         address = cur_hotel.get("address")

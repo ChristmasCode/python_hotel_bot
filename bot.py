@@ -3,8 +3,8 @@ from telebot import types
 from telegram_bot_calendar import DetailedTelegramCalendar, LSTEP
 from bot_requests.low_price import low_get_city, lowprice_get_properties
 from bot_requests.high_price import high_get_city, high_get_properties
+from bot_requests.best_deal import best_get_city, best_get_properties
 from loguru import logger
-
 
 TOKEN = '5511162987:AAGtehigXviygciyEJHdfBRgr8zVwzJtdh4'
 bot = telebot.TeleBot(TOKEN)
@@ -129,6 +129,18 @@ def bot_photos_request(message, user_id):
                     data_out=user["checkOut"],
                     photos_count=0
                 )
+            elif db_dict[user_id]["price"] == "best":
+                final_answer = best_get_properties(
+                    city_id=user["city"],
+                    number_of_hotels=user["number_of_hotels"],
+                    data_in=user["checkIn"],
+                    data_out=user["checkOut"],
+                    price_range_min=user["price_range_min"],
+                    price_range_max=user["price_range_max"],
+                    photos_count=0,
+                    city_center_min=user["city_center_min"],
+                    city_center_max=user["city_center_max"]
+                )
             bot.send_message(message.chat.id, "Search is over: ")
             for hotel in final_answer:
                 bot.send_message(message.chat.id, "Next hotel ⬇")
@@ -148,7 +160,7 @@ def bot_photos_count(message, user_id):
     logger.info(mesg)
     if not (mesg.isnumeric() and int(mesg) > 0):
         bot.send_message(message.chat.id, "Enter an integer, a positive number")
-        how_many_photos = bot.send_message(message.chat.id, "How many photos? (no more than 10) ")
+        how_many_photos = bot.send_message(message.chat.id, "How many photos?")
         bot.register_next_step_handler(how_many_photos, bot_photos_count)
     if mesg.isnumeric() and int(mesg) > 0:
         user = db_dict[user_id]
@@ -163,13 +175,25 @@ def bot_photos_count(message, user_id):
                 data_out=user["checkOut"],
                 photos_count=user["photos_count"]
             )
-        elif db_dict[user_id]["price"] == "low":
+        elif db_dict[user_id]["price"] == "high":
             final_answer = high_get_properties(
                 city_id=user["city"],
                 number_of_hotels=user["number_of_hotels"],
                 data_in=user["checkIn"],
                 data_out=user["checkOut"],
                 photos_count=user["photos_count"]
+            )
+        elif db_dict[user_id]["price"] == "best":
+            final_answer = best_get_properties(
+                city_id=user["city"],
+                number_of_hotels=user["number_of_hotels"],
+                data_in=user["checkIn"],
+                data_out=user["checkOut"],
+                price_range_min=user["price_range_min"],
+                price_range_max=user["price_range_max"],
+                photos_count=user["photos_count"],
+                city_center_min=user["city_center_min"],
+                city_center_max=user["city_center_max"]
             )
         bot.send_message(message.chat.id, "Search is over: ")
         logger.info(final_answer)
@@ -230,6 +254,22 @@ def hight_price_city_request(message):
     bot.register_next_step_handler(mesg, high_price_city_answer)
 
 
+@bot.message_handler(commands=["bestdeal"])
+@logger.catch()
+def best_price_city_request(message):
+    cities_districts = best_get_city(message.text)
+    logger.info(cities_districts)
+    keyboard = types.InlineKeyboardMarkup(row_width=1)
+    for city_name, city_id in cities_districts.items():
+        button = types.InlineKeyboardButton(
+            text=city_name,
+            callback_data="bestdeal_answer" + city_id
+        )
+        keyboard.add(button)
+    mesg = bot.send_message(message.chat.id, 'Make your choice:', reply_markup=keyboard)
+    bot.register_next_step_handler(mesg, best_price_city_answer)
+
+
 @bot.callback_query_handler(func=lambda call: True)
 @logger.catch()
 def answer(call):
@@ -242,7 +282,8 @@ def answer(call):
             mesg = bot.send_message(call.from_user.id, "Enter the city where you want to search: ")
             bot.register_next_step_handler(mesg, hight_price_city_request)
         case "bestdeal":
-            bot.send_message(call.message.chat.id, "bestdeal")
+            mesg = bot.send_message(call.from_user.id, "Enter the city where you want to search: ")
+            bot.register_next_step_handler(mesg, best_price_city_request)
         case "history":
             bot.send_message(call.message.chat.id, "history")
         case _:
@@ -262,6 +303,14 @@ def answer(call):
                 logger.info(mesg_city_id)
                 mesg = bot.send_message(call.from_user.id, "How many hotels to show: ")
                 bot.register_next_step_handler(mesg, count_hotels)
+            elif call.data.startswith("bestdeal_answer"):
+                mesg_city_id = call.message.chat.id, call.data.replace("bestdeal_answer", '')
+                db_dict[call.from_user.id] = {"city": mesg_city_id[1]}
+                db_dict[call.from_user.id]["price"] = "best"
+                logger.info(db_dict)
+                logger.info(mesg_city_id)
+                select = bot.send_message(call.from_user.id, "Select the minimum cost:")
+                bot.register_next_step_handler(select, price_min)
 
 
 def low_price_city_answer(message):
@@ -274,6 +323,68 @@ def high_price_city_answer(message):
     mesg = message.text
     logger.info(mesg)
     return mesg
+
+
+def best_price_city_answer(message):
+    mesg = message.text
+    logger.info(mesg)
+    return mesg
+
+
+def price_min(message):
+    mesg = message.text
+    logger.info(mesg)
+    if not (mesg.isnumeric() and int(mesg) >= 0):
+        bot.send_message(message.chat.id, "Enter an integer, a positive number")
+        select = bot.send_message(message.from_user.id, "Select the minimum cost:")
+        bot.register_next_step_handler(select, price_min)
+    if mesg.isnumeric() and int(mesg) >= 0:
+        db_dict[message.from_user.id]["price_range_min"] = mesg
+        logger.info(db_dict)
+        select = bot.send_message(message.from_user.id, "Select the maximum cost:")
+        bot.register_next_step_handler(select, price_max)
+
+
+def price_max(message):
+    mesg = message.text
+    logger.info(mesg)
+    if not (mesg.isnumeric() and int(mesg) and int(mesg) > int(db_dict[message.from_user.id]["price_range_min"])):
+        bot.send_message(message.chat.id, "Enter an integer, a positive number, and less than minimum cost")
+        select = bot.send_message(message.from_user.id, "Select the maximum cost:")
+        bot.register_next_step_handler(select, price_max)
+    if mesg.isnumeric() and int(mesg) >= 0:
+        db_dict[message.from_user.id]["price_range_max"] = mesg
+        logger.info(db_dict)
+        mesg = bot.send_message(message.from_user.id, "Choose the minimum distance to the city center:")
+        bot.register_next_step_handler(mesg, city_center_min)
+
+
+def city_center_min(message):
+    mesg = message.text
+    logger.info(mesg)
+    if not (mesg.isnumeric() and int(mesg) >= 0):
+        bot.send_message(message.chat.id, "Enter an integer, a positive number")
+        select = bot.send_message(message.from_user.id, "Select the minimum cost:")
+        bot.register_next_step_handler(select, city_center_min)
+    if mesg.isnumeric() and int(mesg) >= 0:
+        db_dict[message.from_user.id]["city_center_min"] = mesg
+        logger.info(db_dict)
+        mesg = bot.send_message(message.from_user.id, "Choose the maximum distance to the city center:")
+        bot.register_next_step_handler(mesg, city_center_max)
+
+
+def city_center_max(message):
+    mesg = message.text
+    logger.info(mesg)
+    if not (mesg.isnumeric() and int(mesg) and int(mesg) > int(db_dict[message.from_user.id]["city_center_min"])):
+        bot.send_message(message.chat.id, "Enter an integer, a positive number, and less than minimum range")
+        select = bot.send_message(message.from_user.id, "Choose the maximum distance to the city center:")
+        bot.register_next_step_handler(select, city_center_max)
+    if mesg.isnumeric() and int(mesg) >= 0:
+        db_dict[message.from_user.id]["city_center_max"] = mesg
+        logger.info(db_dict)
+        mesg = bot.send_message(message.from_user.id, "How many hotels to show: ")
+        bot.register_next_step_handler(mesg, count_hotels)
 
 
 bot.polling(none_stop=True, interval=0)

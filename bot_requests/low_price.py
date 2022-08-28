@@ -92,8 +92,6 @@ def lowprice_get_properties(city_id, number_of_hotels, data_in, data_out, photos
 
 def get_hotels(result_hotels, photos_count_answer):
     result = (result_hotels['data']['body']['searchResults']['results'])
-    # with open('hotel_answer', 'w+') as file:
-    #     json.dump(result, file, indent=4)
     logger.info(result)
     return answer_low_hotel_list(result, photos_count_answer)
 
@@ -103,7 +101,7 @@ def answer_low_hotel_list(hotel_answer, photos_count_answer):
 
     final_answer = []
     answer = {}
-    photos = None
+    photos = 'Sorry, just found photos: 0'
     for cur_hotel in hotel_answer:
         hotel_id = cur_hotel.get("id")
         address = cur_hotel.get("address")
