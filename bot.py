@@ -1,3 +1,4 @@
+import json
 import telebot
 from telebot import types
 from telegram_bot_calendar import DetailedTelegramCalendar, LSTEP
@@ -5,6 +6,9 @@ from bot_requests.low_price import low_get_city, lowprice_get_properties
 from bot_requests.high_price import high_get_city, high_get_properties
 from bot_requests.best_deal import best_get_city, best_get_properties
 from loguru import logger
+from models import *
+from bot_requests.history import record
+from bot_requests.history import read
 
 TOKEN = '5511162987:AAGtehigXviygciyEJHdfBRgr8zVwzJtdh4'
 bot = telebot.TeleBot(TOKEN)
@@ -35,6 +39,8 @@ def get_commands_messages(message):
     key_history = types.InlineKeyboardButton(text="/history", callback_data="history")
     keyboard.add(key_lowprice, key_bestdeal, key_highprice, key_history)
     bot.send_message(message.chat.id, "commands:", reply_markup=keyboard)
+    if not User.select().where(User.telegram_id == message.chat.id):
+        User.create(telegram_id=message.chat.id)
 
 
 @logger.catch()
@@ -142,6 +148,14 @@ def bot_photos_request(message, user_id):
                     city_center_max=user["city_center_max"]
                 )
             bot.send_message(message.chat.id, "Search is over: ")
+            record(user_id, final_answer)
+            # try:
+            #     old_history = db_dict[user_id]["history"]
+            #     old_history.append(final_answer)
+            #     db_dict[user_id].update({"history": old_history})
+            # except KeyError:
+            #     db_dict[user_id].update({"history": final_answer})
+            # logger.info(db_dict)
             for hotel in final_answer:
                 bot.send_message(message.chat.id, "Next hotel ⬇")
                 for key, value in hotel.items():
@@ -197,6 +211,7 @@ def bot_photos_count(message, user_id):
             )
         bot.send_message(message.chat.id, "Search is over: ")
         logger.info(final_answer)
+        record(user_id, final_answer)
         for hotel in final_answer:
             logger.info(hotel)
             bot.send_message(message.chat.id, "Next hotel ⬇")
@@ -273,7 +288,6 @@ def best_price_city_request(message):
 @bot.callback_query_handler(func=lambda call: True)
 @logger.catch()
 def answer(call):
-    logger.info(call)
     match call.data:
         case "lowprice":
             mesg = bot.send_message(call.from_user.id, "Enter the city where you want to search: ")
@@ -285,7 +299,27 @@ def answer(call):
             mesg = bot.send_message(call.from_user.id, "Enter the city where you want to search: ")
             bot.register_next_step_handler(mesg, best_price_city_request)
         case "history":
-            bot.send_message(call.message.chat.id, "history")
+            history = read(call.from_user.id)
+            for request in history:
+                temp = request.get("request")
+                temp = json.loads(temp)
+                # logger.info(temp)
+                # logger.info(type(temp))
+                for hotel in temp:
+                    for key, value in hotel.items:
+                        if key == "📷 Photo":
+                            if value[-1].startswith("Sorry, just found photos"):
+                                if value[-1] == 'Sorry, just found photos: 0':
+                                    bot.send_message(call.from_user.id, "Sorry hotel photos not found")
+                                else:
+                                    bot.send_message(call.from_user.id, value[-1])
+                                    bot.send_media_group(call.from_user.id,
+                                                         [telebot.types.InputMediaPhoto(photo) for photo in value])
+                            else:
+                                bot.send_media_group(call.from_user.id,
+                                                     [telebot.types.InputMediaPhoto(photo) for photo in value])
+                        else:
+                            bot.send_message(call.from_user.id, str(key) + " : " + str(value))
         case _:
             if call.data.startswith("lowprice_answer"):
                 mesg_city_id = call.message.chat.id, call.data.replace("lowprice_answer", '')
