@@ -1,5 +1,6 @@
 import json
 import requests
+from api_key import api_key
 from loguru import logger
 from bot_requests.photos_request import get_hotel_photo
 
@@ -31,7 +32,7 @@ def get_location(city):
     }
 
     headers = {
-        "X-RapidAPI-Key": "5de7c86d3dmsh12453c2c117c912p1f8168jsne9d8cf4c1876",
+        "X-RapidAPI-Key": api_key,
         "X-RapidAPI-Host": "hotels4.p.rapidapi.com"
     }
 
@@ -79,7 +80,7 @@ def lowprice_get_properties(city_id, number_of_hotels, data_in, data_out, photos
     }
 
     headers = {
-        "X-RapidAPI-Key": "5de7c86d3dmsh12453c2c117c912p1f8168jsne9d8cf4c1876",
+        "X-RapidAPI-Key": api_key,
         "X-RapidAPI-Host": "hotels4.p.rapidapi.com"
     }
 
@@ -123,9 +124,14 @@ def answer_low_hotel_list(hotel_answer, photos_count_answer):
         else:
             guest_rating = guestReviews.get("rating")
 
+        check_name = cur_hotel.get("name")
+        check_name = str(check_name).replace("'", '💩')
+        check_adress = cur_hotel.get("streetAddress", "no address")
+        check_adress = str(check_adress).replace("'", '💩')
+
         answer = {
-            "🏨 Hotel name": cur_hotel.get("name"),
-            "📬 Address": address.get("streetAddress", "no address"),
+            "🏨 Hotel name": check_name,
+            "📬 Address": check_adress,
             "💲 Price": current_price,
             "💖 Guest rating": guest_rating,
             "🔗 Link": "https://www.hotels.com/ho" + str(hotel_id),

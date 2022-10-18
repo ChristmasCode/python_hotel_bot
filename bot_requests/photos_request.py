@@ -1,5 +1,6 @@
 import requests
 import json
+from api_key import api_key
 
 
 def get_hotel_photo(hotel_id, photo_count):
@@ -9,7 +10,7 @@ def get_hotel_photo(hotel_id, photo_count):
     answer = []
 
     headers = {
-        "X-RapidAPI-Key": "5de7c86d3dmsh12453c2c117c912p1f8168jsne9d8cf4c1876",
+        "X-RapidAPI-Key": api_key,
         "X-RapidAPI-Host": "hotels4.p.rapidapi.com"
     }
 

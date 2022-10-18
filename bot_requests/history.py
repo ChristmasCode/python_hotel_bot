@@ -1,17 +1,18 @@
-import json
-
 from models import *
+
+conn = SqliteDatabase("history.db")
 
 
 def record(user_id, history_temp):
-    temp = str(history_temp).replace("'", '"')
-    Request.create(request=temp, user=user_id)
+    Request.create(request=history_temp, user=user_id)
 
 
 def read(user_id):
-    # print(Request.select().where(Request.user == 1170996506))
-    query = Request.select().where(Request.user == user_id)
+    query = Request.select(Request.request).where(Request.user == user_id)
     user_selected = query.dicts().execute()
-    # print(user_selected)
     return user_selected
-    # return user["request"] # обработать в history
+
+
+if __name__ == '__main__':
+    init_conn()
+    read(1170996506)

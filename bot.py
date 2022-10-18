@@ -100,14 +100,6 @@ def count_hotels(message):
                      reply_markup=calendar)
 
 
-# def photo_request_button(message):
-#     keyboard = types.InlineKeyboardMarkup(row_width=1)
-#     key_yes = types.InlineKeyboardButton(text="yes", callback_data="yes")
-#     key_no = types.InlineKeyboardButton(text="no", callback_data="no")
-#     keyboard.add(key_yes, key_no)
-#     bot.send_message(message.chat.id, "Make your choice:", reply_markup=keyboard)
-
-
 def bot_photos_request(message, user_id):
     mesg = message.text.lower()
     logger.info(mesg)
@@ -149,13 +141,6 @@ def bot_photos_request(message, user_id):
                 )
             bot.send_message(message.chat.id, "Search is over: ")
             record(user_id, final_answer)
-            # try:
-            #     old_history = db_dict[user_id]["history"]
-            #     old_history.append(final_answer)
-            #     db_dict[user_id].update({"history": old_history})
-            # except KeyError:
-            #     db_dict[user_id].update({"history": final_answer})
-            # logger.info(db_dict)
             for hotel in final_answer:
                 bot.send_message(message.chat.id, "Next hotel ⬇")
                 for key, value in hotel.items():
@@ -299,14 +284,20 @@ def answer(call):
             mesg = bot.send_message(call.from_user.id, "Enter the city where you want to search: ")
             bot.register_next_step_handler(mesg, best_price_city_request)
         case "history":
+            # print(read(1170996506))
             history = read(call.from_user.id)
             for request in history:
                 temp = request.get("request")
+
+                temp = str(temp).replace('\'', '"')
+                temp = str(temp).replace('💩', "'")
+
+
                 temp = json.loads(temp)
                 # logger.info(temp)
                 # logger.info(type(temp))
-                for hotel in temp:
-                    for key, value in hotel.items:
+                for req in temp:
+                    for key, value in req.items():
                         if key == "📷 Photo":
                             if value[-1].startswith("Sorry, just found photos"):
                                 if value[-1] == 'Sorry, just found photos: 0':
@@ -422,3 +413,6 @@ def city_center_max(message):
 
 
 bot.polling(none_stop=True, interval=0)
+
+if __name__ == '__main__':
+    get_start_messages()

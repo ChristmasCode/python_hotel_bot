@@ -20,7 +20,7 @@ class Request(BaseModel):
     user = ForeignKeyField(User, to_field="telegram_id")
 
     class Meta:
-        table_name = "request"
+        table_name = "Request"
 
 
 def init_conn():
