@@ -1,20 +1,22 @@
-import requests
 import json
+from typing import Any
+
+import requests
 from api_key import api_key
 
 
-def get_hotel_photo(hotel_id, photo_count):
+def get_hotel_photo(hotel_id: int, photo_count: int) -> list:
     url = "https://hotels4.p.rapidapi.com/properties/get-hotel-photos"
 
-    querystring = {"id": hotel_id}
-    answer = []
+    querystring: dict[str, int] = {"id": hotel_id}
+    answer: list[str | Any] = []
 
     headers = {
         "X-RapidAPI-Key": api_key,
         "X-RapidAPI-Host": "hotels4.p.rapidapi.com"
     }
 
-    photos = []
+    photos: list[Any] = []
     response = requests.request("GET", url, headers=headers, params=querystring, timeout=60)
 
     if response:
@@ -29,4 +31,3 @@ def get_hotel_photo(hotel_id, photo_count):
         answer.append("Sorry, just found photos: " + str(len(photos)))
 
     return answer
-

@@ -1,14 +1,15 @@
 import json
+
 import telebot
-from telebot import types
-from telegram_bot_calendar import DetailedTelegramCalendar, LSTEP
-from bot_requests.low_price import low_get_city, lowprice_get_properties
-from bot_requests.high_price import high_get_city, high_get_properties
-from bot_requests.best_deal import best_get_city, best_get_properties
 from loguru import logger
+from telebot import types
+from telegram_bot_calendar import LSTEP, DetailedTelegramCalendar
+
+from bot_requests.best_deal import best_get_city, best_get_properties
+from bot_requests.high_price import high_get_city, high_get_properties
+from bot_requests.history import read, record
+from bot_requests.low_price import low_get_city, lowprice_get_properties
 from models import *
-from bot_requests.history import record
-from bot_requests.history import read
 
 TOKEN = '5511162987:AAGtehigXviygciyEJHdfBRgr8zVwzJtdh4'
 bot = telebot.TeleBot(TOKEN)
@@ -80,7 +81,6 @@ def route_by_state(date, user_id, chat_id):
                              f"Select {LSTEP[step]}",
                              reply_markup=calendar)
         case "date_to":
-            user = db_dict[user_id]
             db_dict[user_id]["checkOut"] = date
             mesg = bot.send_message(chat_id, "You want to see photos of hotels? ('yes'/'no'): ")
             bot.register_next_step_handler(mesg, bot_photos_request, user_id)
@@ -291,11 +291,7 @@ def answer(call):
 
                 temp = str(temp).replace('\'', '"')
                 temp = str(temp).replace('💩', "'")
-
-
                 temp = json.loads(temp)
-                # logger.info(temp)
-                # logger.info(type(temp))
                 for req in temp:
                     for key, value in req.items():
                         if key == "📷 Photo":
@@ -338,19 +334,19 @@ def answer(call):
                 bot.register_next_step_handler(select, price_min)
 
 
-def low_price_city_answer(message):
+def low_price_city_answer(message) -> str:
     mesg = message.text
     logger.info(mesg)
     return mesg
 
 
-def high_price_city_answer(message):
+def high_price_city_answer(message) -> str:
     mesg = message.text
     logger.info(mesg)
     return mesg
 
 
-def best_price_city_answer(message):
+def best_price_city_answer(message) -> str:
     mesg = message.text
     logger.info(mesg)
     return mesg

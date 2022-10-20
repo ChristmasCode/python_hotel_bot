@@ -1,7 +1,10 @@
 import json
+from typing import Any, Dict
+
 import requests
 from api_key import api_key
 from loguru import logger
+
 from bot_requests.photos_request import get_hotel_photo
 
 # bestdel
@@ -25,7 +28,7 @@ from bot_requests.photos_request import get_hotel_photo
 #     """
 
 
-def get_location(city):
+def get_location(city: str) -> dict:
     logger.info(city)
     url = "https://hotels4.p.rapidapi.com/locations/v2/search"
 
@@ -47,7 +50,7 @@ def get_location(city):
     return result
 
 
-def best_get_city(city):
+def best_get_city(city: str) -> dict:
     logger.info(city)
     result_location = get_location(city)
     data_suggestions = result_location.get('suggestions')
@@ -66,14 +69,20 @@ def best_get_city(city):
     return result
 
 
-def best_get_properties(city_id, number_of_hotels, data_in, data_out,
-                        photos_count, price_range_min, price_range_max,
-                        city_center_min, city_center_max):
+def best_get_properties(city_id: int,
+                        number_of_hotels: int,
+                        data_in: str,
+                        data_out: str,
+                        photos_count: int,
+                        price_range_min: int | float,
+                        price_range_max: int | float,
+                        city_center_min: int | float,
+                        city_center_max: int | float) -> list:
     url = "https://hotels4.p.rapidapi.com/properties/list"
 
     photos_count_answer = photos_count
 
-    querystring = {
+    querystring: dict[str | Any, int | str | float | Any] = {
         "destinationId": city_id,
         "pageNumber": "1",
         "pageSize": number_of_hotels,
@@ -99,13 +108,19 @@ def best_get_properties(city_id, number_of_hotels, data_in, data_out,
     return get_hotels(result, photos_count_answer, city_center_min, city_center_max)
 
 
-def get_hotels(result_hotels, photos_count_answer, city_center_min, city_center_max):
+def get_hotels(result_hotels: dict,
+               photos_count_answer: int,
+               city_center_min: int | float,
+               city_center_max: int | float) -> Any:
     result = (result_hotels['data']['body']['searchResults']['results'])
     logger.info(result)
     return answer_best_hotel_list(result, photos_count_answer, city_center_min, city_center_max)
 
 
-def answer_best_hotel_list(hotel_answer, photos_count_answer, city_center_min, city_center_max):
+def answer_best_hotel_list(hotel_answer: dict,
+                           photos_count_answer: int,
+                           city_center_min: int | float,
+                           city_center_max: int | float) -> list:
     total_price = "no price"
     photo_count = photos_count_answer
 
@@ -117,7 +132,6 @@ def answer_best_hotel_list(hotel_answer, photos_count_answer, city_center_min, c
     photos = 'Sorry, just found photos: 0'
     for cur_hotel in hotel_answer:
         hotel_id = cur_hotel.get("id")
-        address = cur_hotel.get("address")
         city_center = cur_hotel["landmarks"][0]["distance"]
         if center_min > city_center > center_max:
             pass
@@ -144,12 +158,12 @@ def answer_best_hotel_list(hotel_answer, photos_count_answer, city_center_min, c
 
         check_name = cur_hotel.get("name")
         check_name = str(check_name).replace("'", '💩')
-        check_adress = cur_hotel.get("streetAddress", "no address")
-        check_adress = str(check_adress).replace("'", '💩')
+        check_address = cur_hotel["address"].get("streetAddress", "no address")
+        check_address = str(check_address).replace("'", '💩')
 
         answer = {
             "🏨 Hotel name": check_name,
-            "📬 Address": check_adress,
+            "📬 Address": check_address,
             "💲 Price": current_price,
             "💲 Total price": total_price,
             "💖 Guest rating": guest_rating,
