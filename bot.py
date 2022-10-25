@@ -1,5 +1,7 @@
 import json
+import datetime
 
+import requests
 import telebot
 from loguru import logger
 from telebot import types
@@ -7,7 +9,7 @@ from telegram_bot_calendar import LSTEP, DetailedTelegramCalendar
 
 from bot_requests.best_deal import best_get_city, best_get_properties
 from bot_requests.high_price import high_get_city, high_get_properties
-from bot_requests.history import read, record
+from bot_requests.history import read, read_time, read_command, record
 from bot_requests.low_price import low_get_city, lowprice_get_properties
 from models import *
 
@@ -118,6 +120,10 @@ def bot_photos_request(message, user_id):
                     data_out=user["checkOut"],
                     photos_count=0
                 )
+                current_time = datetime.datetime.now()
+                logger.info(current_time)
+                current_command = "/lowprice"
+                record(final_answer, user_id, current_time, current_command)
 
             elif db_dict[user_id]["price"] == "high":
                 final_answer = high_get_properties(
@@ -127,6 +133,11 @@ def bot_photos_request(message, user_id):
                     data_out=user["checkOut"],
                     photos_count=0
                 )
+                current_time = datetime.datetime.now()
+                logger.info(current_time)
+                current_command = "/highprice"
+                record(final_answer, user_id, current_time, current_command)
+
             elif db_dict[user_id]["price"] == "best":
                 final_answer = best_get_properties(
                     city_id=user["city"],
@@ -139,8 +150,12 @@ def bot_photos_request(message, user_id):
                     city_center_min=user["city_center_min"],
                     city_center_max=user["city_center_max"]
                 )
+                current_time = datetime.datetime.now()
+                logger.info(current_time)
+                current_command = "/bestdeal"
+                record(final_answer, user_id, current_time, current_command)
             bot.send_message(message.chat.id, "Search is over: ")
-            record(user_id, final_answer)
+
             for hotel in final_answer:
                 bot.send_message(message.chat.id, "Next hotel ⬇")
                 for key, value in hotel.items():
@@ -174,6 +189,11 @@ def bot_photos_count(message, user_id):
                 data_out=user["checkOut"],
                 photos_count=user["photos_count"]
             )
+            current_time = datetime.datetime.now()
+            logger.info(current_time)
+            current_command = "/lowprice"
+            record(final_answer, user_id, current_time, current_command)
+
         elif db_dict[user_id]["price"] == "high":
             final_answer = high_get_properties(
                 city_id=user["city"],
@@ -182,6 +202,11 @@ def bot_photos_count(message, user_id):
                 data_out=user["checkOut"],
                 photos_count=user["photos_count"]
             )
+            current_time = datetime.datetime.now()
+            logger.info(current_time)
+            current_command = "/highprice"
+            record(final_answer, user_id, current_time, current_command)
+
         elif db_dict[user_id]["price"] == "best":
             final_answer = best_get_properties(
                 city_id=user["city"],
@@ -194,9 +219,14 @@ def bot_photos_count(message, user_id):
                 city_center_min=user["city_center_min"],
                 city_center_max=user["city_center_max"]
             )
+            current_time = datetime.datetime.now()
+            logger.info(current_time)
+            current_command = "/beastdeal"
+            record(final_answer, user_id, current_time, current_command)
+
         bot.send_message(message.chat.id, "Search is over: ")
         logger.info(final_answer)
-        record(user_id, final_answer)
+
         for hotel in final_answer:
             logger.info(hotel)
             bot.send_message(message.chat.id, "Next hotel ⬇")
@@ -284,8 +314,18 @@ def answer(call):
             mesg = bot.send_message(call.from_user.id, "Enter the city where you want to search: ")
             bot.register_next_step_handler(mesg, best_price_city_request)
         case "history":
+            history_command = read_command(call.from_user.id)
+            for request in history_command:
+                req_command = request.get("input_command")
+                bot.send_message(call.from_user.id, "📣 Your request: " + req_command)
+            history_time = read_time(call.from_user.id)
+            for request in history_time:
+                req_time = str(request.get("current_time"))
+                bot.send_message(call.from_user.id, "📅 Time of request: " + req_time[:-7])
+
             history = read(call.from_user.id)
             for request in history:
+                logger.info(request)
                 temp = request.get("request")
                 temp = str(temp).replace('\'', '"')
                 temp = str(temp).replace('💩', "'")

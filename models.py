@@ -18,6 +18,8 @@ class User(BaseModel):
 class Request(BaseModel):
     request = CharField(column_name="request")
     user = ForeignKeyField(User, to_field="telegram_id")
+    current_time = DateTimeField(column_name="current_time")
+    input_command = CharField(column_name="input_command")
 
     class Meta:
         table_name = "Request"
