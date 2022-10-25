@@ -284,11 +284,9 @@ def answer(call):
             mesg = bot.send_message(call.from_user.id, "Enter the city where you want to search: ")
             bot.register_next_step_handler(mesg, best_price_city_request)
         case "history":
-            # print(read(1170996506))
             history = read(call.from_user.id)
             for request in history:
                 temp = request.get("request")
-
                 temp = str(temp).replace('\'', '"')
                 temp = str(temp).replace('💩', "'")
                 temp = json.loads(temp)
@@ -409,6 +407,3 @@ def city_center_max(message):
 
 
 bot.polling(none_stop=True, interval=0)
-
-if __name__ == '__main__':
-    get_start_messages()
