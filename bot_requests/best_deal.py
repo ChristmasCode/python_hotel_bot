@@ -1,31 +1,16 @@
 import json
-from typing import Any, Dict
+import os
+from typing import Any
 
 import requests
-from api_key import api_key
+from dotenv import load_dotenv
 from loguru import logger
 
 from bot_requests.photos_request import get_hotel_photo
 
-# bestdel
-#
-#     """
-#     Script bestdel.
-#         Requested:
-#             - City to be searched.
-#
-#             - Range of prices.
-#
-#             - The range of distance the hotel is from the center.
-#
-#             - Number of hotels to withdraw as a result (no more
-#             a predetermined maximum).
-#
-#             - Need to upload and output photos for each hotel («Yes/No»):
-#                 - If the answer is positive, the user also enters the number
-#                 required photos (no more than the
-#                 maxima).
-#     """
+load_dotenv()
+
+api_key = os.getenv("RAPIDAPI_KEY")
 
 
 def get_location(city: str) -> dict:

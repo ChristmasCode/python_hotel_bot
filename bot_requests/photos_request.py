@@ -1,8 +1,13 @@
 import json
+import os
 from typing import Any
 
 import requests
-from api_key import api_key
+from dotenv import load_dotenv
+
+load_dotenv()
+
+api_key = os.getenv("RAPIDAPI_KEY")
 
 
 def get_hotel_photo(hotel_id: int, photo_count: int) -> list:

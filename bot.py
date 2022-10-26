@@ -1,7 +1,9 @@
 import json
 import datetime
+import os
 
-import requests
+from dotenv import load_dotenv
+
 import telebot
 from loguru import logger
 from telebot import types
@@ -13,7 +15,9 @@ from bot_requests.history import read, read_time, read_command, record
 from bot_requests.low_price import low_get_city, lowprice_get_properties
 from models import *
 
-TOKEN = '5511162987:AAGtehigXviygciyEJHdfBRgr8zVwzJtdh4'
+load_dotenv()
+
+TOKEN = os.getenv("BOT_TOKEN")
 bot = telebot.TeleBot(TOKEN)
 
 bot_help = "/lowprice - Search of the cheapest hotels in the city\n" \
