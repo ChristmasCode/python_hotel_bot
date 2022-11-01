@@ -52,7 +52,7 @@ def get_commands_messages(message):
 
 @logger.catch()
 def bot_calendar(message):
-    calendar, step = DetailedTelegramCalendar().build()
+    calendar, step = DetailedTelegramCalendar(min_date=datetime.datetime.now().date()).build()
     bot.send_message(message.chat.id,
                      f"Select {LSTEP[step]}",
                      reply_markup=calendar)
@@ -61,7 +61,7 @@ def bot_calendar(message):
 @bot.callback_query_handler(func=DetailedTelegramCalendar.func())
 @logger.catch()
 def cal(call):
-    result, key, step = DetailedTelegramCalendar().process(call.data)
+    result, key, step = DetailedTelegramCalendar(min_date=datetime.datetime.now().date()).process(call.data)
     if not result and key:
         bot.edit_message_text(f"Select {LSTEP[step]}",
                               call.message.chat.id,
@@ -81,7 +81,7 @@ def route_by_state(date, user_id, chat_id):
         case "date_from":
             db_dict[user_id]["checkIn"] = date
             db_dict[user_id]["state"] = "date_to"
-            calendar, step = DetailedTelegramCalendar().build()
+            calendar, step = DetailedTelegramCalendar(min_date=datetime.datetime.now().date()).build()
             bot.send_message(chat_id, "Select check out date: ")
             bot.send_message(chat_id,
                              f"Select {LSTEP[step]}",
@@ -99,7 +99,7 @@ def count_hotels(message):
     db_dict[message.from_user.id]["state"] = "date_from"
     logger.info(mesg)
     logger.info(db_dict)
-    calendar, step = DetailedTelegramCalendar().build()
+    calendar, step = DetailedTelegramCalendar(min_date=datetime.datetime.now().date()).build()
     bot.send_message(message.chat.id, "Select check in date: ")
     bot.send_message(message.chat.id,
                      f"Select {LSTEP[step]}",
