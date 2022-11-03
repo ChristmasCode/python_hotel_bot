@@ -247,7 +247,7 @@ def bot_photos_count(message, user_id):
                         bot.send_media_group(message.chat.id,
                                              [telebot.types.InputMediaPhoto(photo) for photo in value])
                 else:
-                    bot.send_message(message.chat.id, key + " : " + value)
+                    bot.send_message(message.chat.id, key + " : " + value, disable_web_page_preview=True)
 
 
 @bot.message_handler(commands=["help"])
@@ -348,7 +348,8 @@ def answer(call):
                                 bot.send_media_group(call.from_user.id,
                                                      [telebot.types.InputMediaPhoto(photo) for photo in value])
                         else:
-                            bot.send_message(call.from_user.id, str(key) + " : " + str(value))
+                            bot.send_message(call.from_user.id, str(key) + " : " + str(value),
+                                             disable_web_page_preview=True)
         case _:
             if call.data.startswith("lowprice_answer"):
                 mesg_city_id = call.message.chat.id, call.data.replace("lowprice_answer", '')
