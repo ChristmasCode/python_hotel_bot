@@ -3,5 +3,5 @@ from models import init_conn
 
 
 if __name__ == '__main__':
-    # init_conn()
+    init_conn()
     get_start_messages()

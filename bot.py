@@ -2,6 +2,7 @@ import json
 import datetime
 import os
 
+import peewee
 from dotenv import load_dotenv
 
 import telebot
@@ -325,39 +326,45 @@ def answer(call):
             mesg = bot.send_message(call.from_user.id, "Enter the city where you want to search: ")
             bot.register_next_step_handler(mesg, best_price_city_request)
         case "history":
+            history = read(call.from_user.id)
             history_command = read_command(call.from_user.id)
             history_time = read_time(call.from_user.id)
-
-            history = read(call.from_user.id)
             history_iterator = 0
-            for request in history:
-                req_command = history_command[history_iterator].get("input_command")
-                req_time = str(history_time[history_iterator].get("current_time"))
-                bot.send_message(call.from_user.id, "📣 Your request: " + req_command +
-                                 "\n" +
-                                 "📅 Time of request: " + req_time[:-7])
-                history_iterator += 1
-                logger.info(request)
-                temp = request.get("request")
-                temp = str(temp).replace('\'', '"')
-                temp = str(temp).replace('💩', "'")
-                temp = json.loads(temp)
-                for req in temp:
-                    answer_message = ""
-                    for key, value in req.items():
-                        if key != "📷 Photo":
-                            answer_message += str(key) + " : " + str(value) + "\n"
-                        else:
-                            if isinstance(value, str):
-                                if value.startswith("Sorry, just found photos"):
-                                    if value == 'Sorry, just found photos: 0':
-                                        bot.send_message(call.from_user.id, "Sorry hotel photos not found")
+
+            query = User.select(User.telegram_id).where(User.telegram_id == call.from_user.id)
+            if query.exists():
+                for request in history:
+                    req_command = history_command[history_iterator].get("input_command")
+                    req_time = str(history_time[history_iterator].get("current_time"))
+                    bot.send_message(call.from_user.id, "📣 Your request: " + req_command +
+                                     "\n" +
+                                     "📅 Time of request: " + req_time[:-7])
+                    history_iterator += 1
+                    logger.info(request)
+                    temp = request.get("request")
+                    temp = str(temp).replace('\'', '"')
+                    temp = str(temp).replace('💩', "'")
+                    temp = json.loads(temp)
+                    for req in temp:
+                        bot.send_message(call.from_user.id, "Next hotel ⬇")
+                        answer_message = ""
+                        for key, value in req.items():
+                            if key != "📷 Photo":
+                                answer_message += str(key) + " : " + str(value) + "\n"
                             else:
-                                bot.send_media_group(call.from_user.id,
-                                                     [telebot.types.InputMediaPhoto(photo) for photo in value])
-                    else:
-                        bot.send_message(call.from_user.id, answer_message,
-                                         disable_web_page_preview=True)
+                                if isinstance(value, str):
+                                    if value.startswith("Sorry, just found photos"):
+                                        if value == 'Sorry, just found photos: 0':
+                                            bot.send_message(call.from_user.id, "Sorry hotel photos not found")
+                                else:
+                                    bot.send_media_group(call.from_user.id,
+                                                         [telebot.types.InputMediaPhoto(photo) for photo in value])
+                        else:
+                            bot.send_message(call.from_user.id, answer_message,
+                                             disable_web_page_preview=True)
+            else:
+                bot.send_message(call.from_user.id, "Your search history is empty")
+
         case _:
             if call.data.startswith("lowprice_answer"):
                 mesg_city_id = call.message.chat.id, call.data.replace("lowprice_answer", '')
