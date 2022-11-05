@@ -162,11 +162,14 @@ def bot_photos_request(message, user_id):
 
             for hotel in final_answer:
                 bot.send_message(message.chat.id, "Next hotel ⬇")
+                answer_message = ""
                 for key, value in hotel.items():
+                    answer_message += key + " : " + value + "\n"
                     if key == "📷 Photo":
                         pass
-                    else:
-                        bot.send_message(message.chat.id, key + " : " + value)
+                else:
+                    bot.send_message(message.chat.id, answer_message,
+                                     disable_web_page_preview=True)
 
         case _:
             mesg = bot.send_message(message.chat.id, "You want to see photos of hotels? ('yes'/'no'): ")
@@ -234,20 +237,24 @@ def bot_photos_count(message, user_id):
         for hotel in final_answer:
             logger.info(hotel)
             bot.send_message(message.chat.id, "Next hotel ⬇")
+            answer_message = ""
             for key, value in hotel.items():
+                if key != "📷 Photo":
+                    answer_message += str(key) + " : " + str(value) + "\n"
                 if key == "📷 Photo":
                     if value[-1].startswith("Sorry, just found photos"):
                         if value[-1] == 'Sorry, just found photos: 0':
-                            bot.send_message(message.chat.id, "Sorry hotel photos not found")
+                            bot.send_message(message.from_user.id, "Sorry hotel photos not found")
                         else:
-                            bot.send_message(message.chat.id, value[-1])
-                            bot.send_media_group(message.chat.id,
+                            bot.send_message(message.from_user.id, value[-1])
+                            bot.send_media_group(message.from_user.id,
                                                  [telebot.types.InputMediaPhoto(photo) for photo in value])
                     else:
-                        bot.send_media_group(message.chat.id,
+                        bot.send_media_group(message.from_user.id,
                                              [telebot.types.InputMediaPhoto(photo) for photo in value])
-                else:
-                    bot.send_message(message.chat.id, key + " : " + value, disable_web_page_preview=True)
+            else:
+                bot.send_message(message.from_user.id, answer_message,
+                                 disable_web_page_preview=True)
 
 
 @bot.message_handler(commands=["help"])
@@ -319,37 +326,38 @@ def answer(call):
             bot.register_next_step_handler(mesg, best_price_city_request)
         case "history":
             history_command = read_command(call.from_user.id)
-            for request in history_command:
-                req_command = request.get("input_command")
-                bot.send_message(call.from_user.id, "📣 Your request: " + req_command)
             history_time = read_time(call.from_user.id)
-            for request in history_time:
-                req_time = str(request.get("current_time"))
-                bot.send_message(call.from_user.id, "📅 Time of request: " + req_time[:-7])
 
             history = read(call.from_user.id)
+            history_iterator = 0
             for request in history:
+                req_command = history_command[history_iterator].get("input_command")
+                req_time = str(history_time[history_iterator].get("current_time"))
+                bot.send_message(call.from_user.id, "📣 Your request: " + req_command +
+                                 "\n" +
+                                 "📅 Time of request: " + req_time[:-7])
+                history_iterator += 1
                 logger.info(request)
                 temp = request.get("request")
                 temp = str(temp).replace('\'', '"')
                 temp = str(temp).replace('💩', "'")
                 temp = json.loads(temp)
                 for req in temp:
+                    answer_message = ""
                     for key, value in req.items():
-                        if key == "📷 Photo":
-                            if value[-1].startswith("Sorry, just found photos"):
-                                if value[-1] == 'Sorry, just found photos: 0':
-                                    bot.send_message(call.from_user.id, "Sorry hotel photos not found")
-                                else:
-                                    bot.send_message(call.from_user.id, value[-1])
-                                    bot.send_media_group(call.from_user.id,
-                                                         [telebot.types.InputMediaPhoto(photo) for photo in value])
+                        if key != "📷 Photo":
+                            answer_message += str(key) + " : " + str(value) + "\n"
+                        else:
+                            if isinstance(value, str):
+                                if value.startswith("Sorry, just found photos"):
+                                    if value == 'Sorry, just found photos: 0':
+                                        bot.send_message(call.from_user.id, "Sorry hotel photos not found")
                             else:
                                 bot.send_media_group(call.from_user.id,
                                                      [telebot.types.InputMediaPhoto(photo) for photo in value])
-                        else:
-                            bot.send_message(call.from_user.id, str(key) + " : " + str(value),
-                                             disable_web_page_preview=True)
+                    else:
+                        bot.send_message(call.from_user.id, answer_message,
+                                         disable_web_page_preview=True)
         case _:
             if call.data.startswith("lowprice_answer"):
                 mesg_city_id = call.message.chat.id, call.data.replace("lowprice_answer", '')
