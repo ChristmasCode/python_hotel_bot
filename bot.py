@@ -317,15 +317,19 @@ def best_price_city_request(message):
 def answer(call):
     match call.data:
         case "lowprice":
+            logger.info(call.from_user.id)
             mesg = bot.send_message(call.from_user.id, "Enter the city where you want to search: ")
             bot.register_next_step_handler(mesg, low_price_city_request)
         case "highprice":
+            logger.info(call.from_user.id)
             mesg = bot.send_message(call.from_user.id, "Enter the city where you want to search: ")
             bot.register_next_step_handler(mesg, hight_price_city_request)
         case "bestdeal":
+            logger.info(call.from_user.id)
             mesg = bot.send_message(call.from_user.id, "Enter the city where you want to search: ")
             bot.register_next_step_handler(mesg, best_price_city_request)
         case "history":
+            logger.info(call.from_user.id)
             history = read(call.from_user.id)
             history_command = read_command(call.from_user.id)
             history_time = read_time(call.from_user.id)
